@@ -1,0 +1,138 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* SugarEcchi design system — electric editorial. */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-surface: var(--surface);
+  --color-glow: var(--accent);
+  --color-wine: var(--primary);
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --shadow-luxe: 0 24px 70px -24px oklch(0.63 0.23 345 / 0.42);
+  --shadow-gold: 0 0 0 1px oklch(0.68 0.22 320 / 0.4);
+}
+
+:root {
+  --radius: 0.45rem;
+  --background: oklch(0.075 0.015 315);
+  --surface: oklch(0.115 0.025 315);
+  --foreground: oklch(0.96 0.015 325);
+  --card: oklch(0.12 0.025 315);
+  --card-foreground: oklch(0.96 0.015 325);
+  --popover: oklch(0.105 0.025 315);
+  --popover-foreground: oklch(0.96 0.015 325);
+  --primary: oklch(0.64 0.23 350);
+  --primary-foreground: oklch(0.98 0.008 320);
+  --secondary: oklch(0.18 0.045 305);
+  --secondary-foreground: oklch(0.94 0.02 325);
+  --muted: oklch(0.17 0.025 315);
+  --muted-foreground: oklch(0.7 0.035 315);
+  --accent: oklch(0.66 0.22 300);
+  --accent-foreground: oklch(0.98 0.008 320);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.97 0.008 90);
+  --border: oklch(0.29 0.055 310);
+  --input: oklch(0.2 0.04 310);
+  --ring: oklch(0.64 0.23 350);
+}
+
+.dark {
+  --background: oklch(0.075 0.015 315);
+  --foreground: oklch(0.96 0.015 325);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      linear-gradient(115deg, color-mix(in oklab, var(--primary) 9%, transparent), transparent 34%),
+      linear-gradient(295deg, color-mix(in oklab, var(--accent) 8%, transparent), transparent 30%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+  }
+}
+
+@utility gold-rule {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-primary),
+    var(--color-accent),
+    transparent
+  );
+  height: 1px;
+  opacity: 0.8;
+}
+
+@utility eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* Keep the desktop navigation independent from generated responsive utility
+   ordering. The menu remains compact below tablet width. */
+.navbar-primary,
+.navbar-search,
+.navbar-language {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .navbar-primary {
+    display: flex !important;
+  }
+
+  .navbar-search {
+    display: block !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .navbar-language {
+    display: flex !important;
+  }
+}
