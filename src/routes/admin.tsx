@@ -48,7 +48,7 @@ const packSchema = z.object({
   galleryUrls: z
     .array(
       z.string().refine(
-        (value) => value.startsWith("/") || /^https?:\/\//i.test(value),
+        (value) => /^https?:\/\//i.test(value),
         "Each image must be a valid HTTP(S) link",
       ),
     )
@@ -94,17 +94,21 @@ function AdminPage() {
   );
 }
 
-function LoginForm({ onLogin }: { onLogin: (password: string) => boolean }) {
+function LoginForm({ onLogin }: { onLogin: (password: string) => Promise<void> }) {
   const [password, setPassword] = useState("");
   return (
     <form
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        if (!onLogin(password)) toast.error("Wrong password");
+        try {
+          await onLogin(password);
+        } catch {
+          toast.error("Invalid administrator password");
+        }
       }}
       className="max-w-sm space-y-4 border border-border/60 bg-card p-6"
     >
-      <p className="text-sm text-muted-foreground">Demo login. Password: sugar</p>
+      <p className="text-sm text-muted-foreground">Sign in with the administrator password configured in the API.</p>
       <Input
         type="password"
         value={password}
@@ -132,7 +136,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     duplicatePack,
     addCharacter,
     addTag,
-    resetCatalog,
   } = useCatalog();
 
   const [draft, setDraft] = useState<Draft>(emptyDraft());
@@ -191,7 +194,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const submit = () => {
+  const submit = async () => {
     const slug = draft.slug || slugify(draft.titleEn);
     const galleryUrls = draft.galleryUrls.map((url) => url.trim()).filter(Boolean);
     const parsed = packSchema.safeParse({
@@ -217,7 +220,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       return;
     }
 
-    savePack({
+    try {
+      await savePack({
       id: draft.id,
       slug,
       title: { en: draft.titleEn, ja: draft.titleJa },
@@ -237,10 +241,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       salesCount: draft.salesCount,
       patreonUrl: draft.patreonUrl,
       createdAt: draft.createdAt,
-    });
-    setErrors([]);
-    toast.success("Pack saved");
-    setDraft(emptyDraft());
+      });
+      setErrors([]);
+      toast.success("Pack saved");
+      setDraft(emptyDraft());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save pack");
+    }
   };
 
   const chip = (active: boolean) =>
@@ -471,17 +478,17 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   toast.error("Character name required");
                   return;
                 }
-                const id = newId("ch");
-                addCharacter({
-                  id,
+                void addCharacter({
+                  id: newId("ch"),
                   slug: slugify(newCharacter.en),
                   animeId: newCharacter.animeId || animes[0]?.id || "",
                   name: { en: newCharacter.en, ja: newCharacter.ja || newCharacter.en },
                   description: { en: "", ja: "" },
-                });
-                toggleIn("characterIds", id);
-                setNewCharacter({ en: "", ja: "", animeId: animes[0]?.id ?? "" });
-                toast.success("Character added");
+                }).then((character) => {
+                  toggleIn("characterIds", character.id);
+                  setNewCharacter({ en: "", ja: "", animeId: animes[0]?.id ?? "" });
+                  toast.success("Character added");
+                }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Unable to add character"));
               }}
             >
               Add
@@ -523,15 +530,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   toast.error("Tag name required");
                   return;
                 }
-                const id = newId("tg");
-                addTag({
-                  id,
+                void addTag({
+                  id: newId("tg"),
                   slug: slugify(newTag.en),
                   label: { en: newTag.en, ja: newTag.ja || newTag.en },
-                });
-                toggleIn("tagIds", id);
-                setNewTag({ en: "", ja: "" });
-                toast.success("Tag added");
+                }).then((tag) => {
+                  toggleIn("tagIds", tag.id);
+                  setNewTag({ en: "", ja: "" });
+                  toast.success("Tag added");
+                }).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Unable to add tag"));
               }}
             >
               Add
@@ -582,7 +589,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         </div>
 
         <div className="flex gap-3">
-          <Button onClick={submit}>Save pack</Button>
+          <Button onClick={() => void submit()}>Save pack</Button>
           <Button variant="outline" onClick={onLogout}>
             Sign out
           </Button>
@@ -592,16 +599,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-2xl">Packs ({packs.length})</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              resetCatalog();
-              toast.success("Catalog reset");
-            }}
-          >
-            Reset demo data
-          </Button>
         </div>
         <ul className="space-y-2">
           {packs.map((pack) => (
@@ -623,20 +620,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
-                    duplicatePack(pack.id);
-                    toast.success("Pack duplicated");
-                  }}
+                  onClick={() => void duplicatePack(pack.id).then(() => toast.success("Pack duplicated")).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Unable to duplicate pack"))}
                 >
                   Copy
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
-                    deletePack(pack.id);
-                    toast.success("Pack deleted");
-                  }}
+                  onClick={() => void deletePack(pack.id).then(() => toast.success("Pack deleted")).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Unable to delete pack"))}
                 >
                   Delete
                 </Button>
