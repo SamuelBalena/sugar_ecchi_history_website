@@ -1,12 +1,6 @@
 [build]
   command = "npm run build"
-  publish = "dist/client"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-
-# Garante que rotas do SPA/SSR funcionem
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/server"
-  status = 200
