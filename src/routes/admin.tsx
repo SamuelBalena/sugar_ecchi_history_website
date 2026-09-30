@@ -94,30 +94,51 @@ function AdminPage() {
   );
 }
 
-function LoginForm({ onLogin }: { onLogin: (password: string) => Promise<void> }) {
+const DEFAULT_ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL ?? "";
+
+function LoginForm({
+  onLogin,
+}: {
+  onLogin: (credentials: { email: string; password: string }) => Promise<void>;
+}) {
+  const [email, setEmail] = useState(DEFAULT_ADMIN_EMAIL);
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   return (
     <form
       onSubmit={async (event) => {
         event.preventDefault();
         try {
-          await onLogin(password);
-        } catch {
-          toast.error("Invalid administrator password");
+          setIsSubmitting(true);
+          await onLogin({ email, password });
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Invalid administrator credentials");
+        } finally {
+          setIsSubmitting(false);
         }
       }}
       className="max-w-sm space-y-4 border border-border/60 bg-card p-6"
     >
-      <p className="text-sm text-muted-foreground">Sign in with the administrator password configured in the API.</p>
+      <p className="text-sm text-muted-foreground">Sign in with the administrator credentials configured in the API.</p>
+      <Input
+        type="email"
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        placeholder="Admin email"
+        aria-label="Admin email"
+        required
+      />
       <Input
         type="password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         placeholder="Password"
         aria-label="Password"
+        required
       />
-      <Button type="submit" className="w-full">
-        Sign in
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
     </form>
   );
@@ -136,6 +157,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     duplicatePack,
     addCharacter,
     addTag,
+    addCollection,
   } = useCatalog();
 
   const [draft, setDraft] = useState<Draft>(emptyDraft());
@@ -143,6 +165,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [imageUrl, setImageUrl] = useState("");
   const [newCharacter, setNewCharacter] = useState({ en: "", ja: "", animeId: animes[0]?.id ?? "" });
   const [newTag, setNewTag] = useState({ en: "", ja: "" });
+  const [newCollection, setNewCollection] = useState({ en: "", ja: "" });
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -483,7 +506,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   slug: slugify(newCharacter.en),
                   animeId: newCharacter.animeId || animes[0]?.id || "",
                   name: { en: newCharacter.en, ja: newCharacter.ja || newCharacter.en },
-                  description: { en: "", ja: "" },
+                  description: { en: newCharacter.en, ja: newCharacter.ja || newCharacter.en },
                 }).then((character) => {
                   toggleIn("characterIds", character.id);
                   setNewCharacter({ en: "", ja: "", animeId: animes[0]?.id ?? "" });
@@ -558,6 +581,46 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 {tx(collection.title)}
               </button>
             ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Input
+              className="w-44"
+              placeholder="New collection (EN)"
+              value={newCollection.en}
+              onChange={(e) => setNewCollection((p) => ({ ...p, en: e.target.value }))}
+            />
+            <Input
+              className="w-44"
+              placeholder="新コレクション (JA)"
+              value={newCollection.ja}
+              onChange={(e) => setNewCollection((p) => ({ ...p, ja: e.target.value }))}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (!newCollection.en.trim()) {
+                  toast.error("Collection title required");
+                  return;
+                }
+                void addCollection({
+                  id: newId("co"),
+                  slug: slugify(newCollection.en),
+                  title: { en: newCollection.en, ja: newCollection.ja || newCollection.en },
+                  description: { en: newCollection.en, ja: newCollection.ja || newCollection.en },
+                })
+                  .then((col) => {
+                    toggleIn("collectionIds", col.id);
+                    setNewCollection({ en: "", ja: "" });
+                    toast.success("Collection added");
+                  })
+                  .catch((error: unknown) =>
+                    toast.error(error instanceof Error ? error.message : "Unable to add collection"),
+                  );
+              }}
+            >
+              Add
+            </Button>
           </div>
         </Field>
 
